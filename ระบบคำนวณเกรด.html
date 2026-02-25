@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบคำนวณเกรดเฉลี่ย (GPA)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background-color: rgba(255, 255, 255, 0.98);
+            padding: 30px 40px;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 900px; 
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        .header h2 { margin: 0; color: #2c3e50; font-size: 28px; }
+        .header p { color: #7f8c8d; margin-top: 5px; font-size: 15px; }
+
+        .subjects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .subject-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f8f9fa;
+            padding: 12px 15px;
+            border-radius: 8px;
+            border-left: 5px solid #3498db;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+        .subject-info {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .subject-name {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 15px;
+        }
+        
+        .credit-box {
+            display: flex;
+            align-items: center;
+            font-size: 13px;
+            color: #7f8c8d;
+        }
+        .credit-box input {
+            width: 50px;
+            padding: 4px;
+            margin-left: 8px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            text-align: center;
+            outline: none;
+        }
+
+        select.grade {
+            padding: 8px;
+            border: 1px solid #bdc3c7;
+            border-radius: 6px;
+            font-size: 14px;
+            background-color: white;
+            color: #333;
+            cursor: pointer;
+            outline: none;
+            min-width: 130px;
+        }
+        select.grade:focus { border-color: #3498db; }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(37, 117, 252, 0.4);
+        }
+
+        #result-box {
+            margin-top: 25px;
+            text-align: center;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+            animation: fadeIn 0.5s;
+        }
+        #gpa-score { font-size: 48px; font-weight: bold; margin: 10px 0; }
+        #gpa-feedback { font-size: 18px; font-weight: bold; }
+        #total-credits { font-size: 15px; color: #555; margin-top: 10px; font-weight: bold; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <h2>🎓 ระบบคำนวณเกรด (16 วิชา)</h2>
+            <p>แก้ไขหน่วยกิตได้ หากเลือก <b>"ไม่มี"</b> หรือ <b>"ร"</b> วิชานั้นจะไม่ถูกนำมาคิดเกรด</p>
+        </div>
+
+        <div class="subjects-grid" id="subjects-container">
+            </div>
+
+        <button onclick="calculateGPA()">🧮 คำนวณเกรดเฉลี่ย</button>
+
+        <div id="result-box">
+            <div>เกรดเฉลี่ยสะสม (GPA) ของคุณคือ</div>
+            <div id="gpa-score">0.00</div>
+            <div id="gpa-feedback">สถานะ</div>
+            <div id="total-credits">หน่วยกิตรวม: 0</div>
+        </div>
+    </div>
+
+    <script>
+        // อัปเดตรายชื่อวิชา: ยุบรวมการงานอาชีพและเทคโนโลยีเข้าด้วยกัน
+        const subjects = [
+            { name: "ฟิสิกส์ ⚛️", credit: 1.5, color: "#9b59b6" },
+            { name: "เคมี 🧪", credit: 1.5, color: "#3498db" },
+            { name: "ชีววิทยา 🧬", credit: 1.5, color: "#2ecc71" },
+            { name: "คณิตศาสตร์เพิ่มเติม 📐", credit: 1.5, color: "#e74c3c" },
+            { name: "คณิตศาสตร์พื้นฐาน 📊", credit: 1.0, color: "#e67e22" },
+            { name: "ภาษาไทย 📚", credit: 1.0, color: "#f1c40f" },
+            { name: "ภาษาอังกฤษพื้นฐาน 🗣️", credit: 1.0, color: "#1abc9c" },
+            { name: "ภาษาอังกฤษเพิ่มเติม 💬", credit: 1.0, color: "#16a085" },
+            { name: "สังคมศึกษา 🌍", credit: 1.0, color: "#d35400" },
+            { name: "ประวัติศาสตร์ ⏳", credit: 0.5, color: "#c0392b" },
+            { name: "สุขศึกษาและพลศึกษา 🏃‍♂️", credit: 0.5, color: "#8e44ad" },
+            { name: "ศิลปะ 🎨", credit: 0.5, color: "#ff9ff3" },
+            { name: "ดนตรี 🎵", credit: 0.5, color: "#feca57" },
+            { name: "นาฏศิลป์ 💃", credit: 0.5, color: "#ff6b6b" },
+            { name: "การงานอาชีพและเทคโนโลยี 🛠️💻", credit: 1.0, color: "#48dbfb" },
+            { name: "คอมพิวเตอร์ 🖥️", credit: 0.5, color: "#1dd1a1" }
+        ];
+
+        function renderSubjects() {
+            const container = document.getElementById('subjects-container');
+            
+            const gradeOptions = `
+                <option value="" disabled selected>เลือกเกรด</option>
+                <option value="4.0">4.0 (A)</option>
+                <option value="3.5">3.5 (B+)</option>
+                <option value="3.0">3.0 (B)</option>
+                <option value="2.5">2.5 (C+)</option>
+                <option value="2.0">2.0 (C)</option>
+                <option value="1.5">1.5 (D+)</option>
+                <option value="1.0">1.0 (D)</option>
+                <option value="0.0">0.0 (F)</option>
+                <option value="ร">ร (รอการตัดสิน)</option>
+                <option value="ไม่มี">ไม่มี (ไม่คิดเกรด)</option>
+            `;
+
+            subjects.forEach(sub => {
+                const div = document.createElement('div');
+                div.className = 'subject-row';
+                div.style.borderLeftColor = sub.color;
+                div.innerHTML = `
+                    <div class="subject-info">
+                        <div class="subject-name">${sub.name}</div>
+                        <div class="credit-box">
+                            หน่วยกิต: <input type="number" class="credit" value="${sub.credit}" min="0.5" step="0.5">
+                        </div>
+                    </div>
+                    <select class="grade">${gradeOptions}</select>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        renderSubjects();
+
+        function calculateGPA() {
+            const gradeInputs = document.querySelectorAll('.grade');
+            const creditInputs = document.querySelectorAll('.credit');
+
+            let totalCredit = 0;
+            let totalScore = 0;
+            let isAllFilled = true;
+            let isCreditValid = true;
+
+            for (let i = 0; i < gradeInputs.length; i++) {
+                let gradeValue = gradeInputs[i].value;
+                let creditValue = parseFloat(creditInputs[i].value);
+
+                if (isNaN(creditValue) || creditValue <= 0) {
+                    isCreditValid = false;
+                    break;
+                }
+
+                if (gradeValue === "") {
+                    isAllFilled = false;
+                    break;
+                }
+
+                if (gradeValue === "ไม่มี" || gradeValue === "ร") {
+                    continue; 
+                }
+
+                gradeValue = parseFloat(gradeValue);
+                totalScore += (gradeValue * creditValue);
+                totalCredit += creditValue;
+            }
+
+            if (!isCreditValid) {
+                alert("กรุณาระบุ 'หน่วยกิต' ให้ถูกต้อง (ต้องมากกว่า 0)");
+                return;
+            }
+            if (!isAllFilled) {
+                alert("กรุณา 'เลือกเกรด' ให้ครบทุกวิชาครับ (ถ้าวิชาไหนไม่คิดเกรด ให้เลือก 'ไม่มี')");
+                return;
+            }
+
+            if (totalCredit === 0) {
+                alert("ไม่มีรายวิชาที่ถูกนำมาคำนวณเกรดเลยครับ! (คุณเลือก 'ไม่มี' หรือ 'ร' หมดเลย)");
+                return;
+            }
+
+            let gpa = totalScore / totalCredit;
+            gpa = gpa.toFixed(2);
+
+            const resultBox = document.getElementById('result-box');
+            const gpaScoreText = document.getElementById('gpa-score');
+            const gpaFeedback = document.getElementById('gpa-feedback');
+            const totalCreditsText = document.getElementById('total-credits');
+
+            gpaScoreText.innerText = gpa;
+            totalCreditsText.innerText = "หน่วยกิตรวมที่ใช้คิดเกรด: " + totalCredit.toFixed(1) + " หน่วยกิต";
+
+            if (gpa >= 3.50) {
+                resultBox.style.backgroundColor = "#d4edda"; 
+                gpaScoreText.style.color = "#155724";
+                gpaFeedback.style.color = "#155724";
+                gpaFeedback.innerText = "🎉 ยอดเยี่ยมมาก! เตรียมรับเกียรตินิยมได้เลย";
+            } else if (gpa >= 3.00) {
+                resultBox.style.backgroundColor = "#cce5ff"; 
+                gpaScoreText.style.color = "#004085";
+                gpaFeedback.style.color = "#004085";
+                gpaFeedback.innerText = "👍 ดีมากครับ! เกรดสวยเลยทีเดียว";
+            } else if (gpa >= 2.50) {
+                resultBox.style.backgroundColor = "#fff3cd"; 
+                gpaScoreText.style.color = "#856404";
+                gpaFeedback.style.color = "#856404";
+                gpaFeedback.innerText = "👌 มาตรฐานกำลังดีครับ พัฒนาต่อได้อีก!";
+            } else if (gpa >= 2.00) {
+                resultBox.style.backgroundColor = "#ffe8a1"; 
+                gpaScoreText.style.color = "#d39e00";
+                gpaFeedback.style.color = "#d39e00";
+                gpaFeedback.innerText = "💪 ผ่านเกณฑ์ฉลุย เทอมหน้าเอาใหม่นะ";
+            } else {
+                resultBox.style.backgroundColor = "#f8d7da"; 
+                gpaScoreText.style.color = "#721c24";
+                gpaFeedback.style.color = "#721c24";
+                gpaFeedback.innerText = "⚠️ อันตรายนิดหน่อย ต้องฟิตอ่านหนังสือเพิ่มแล้ว!";
+            }
+
+            resultBox.style.display = "block";
+        }
+    </script>
+</body>
+</html>
